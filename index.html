@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ChunkBridge: send files that are too big to send</title>
+<meta name="description" content="ChunkBridge splits big files into parts you can send on WhatsApp or Telegram, then rebuilds them exactly on another Android phone. Free and offline.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2316A085'/%3E%3Cpath d='M14 40h12v-8H14zM26 36h12M38 40h12v-8H38z' stroke='white' stroke-width='5' fill='none' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f9f7; --surface:#ffffff; --ink:#12302b; --muted:#4b6761; --line:#cfe3de;
+  --brand:#0f8a73; --brand-ink:#ffffff; --soft:#d8f1ea; --chunk:#16a085; --coffee:#ffdd00;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0e1514; --surface:#16211f; --ink:#e4f2ee; --muted:#9db8b1; --line:#27403b;
+  --brand:#3fcbb0; --brand-ink:#08201b; --soft:#173a33; --chunk:#2bb39a;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1514; --surface:#16211f; --ink:#e4f2ee; --muted:#9db8b1; --line:#27403b;
+    --brand:#3fcbb0; --brand-ink:#08201b; --soft:#173a33; --chunk:#2bb39a;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Quicksand",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:1.0625rem;line-height:1.65;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+a{color:var(--brand);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--brand);outline-offset:3px;border-radius:6px}
+.wrap{max-width:960px;margin:0 auto;padding:0 22px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:18px;height:64px}
+.logo{font-weight:700;font-size:1.2rem;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:10px;margin-right:auto}
+.logo svg{width:30px;height:30px}
+nav{display:flex;gap:18px}
+nav a{color:var(--muted);font-weight:600;text-decoration:none}
+nav a:hover{color:var(--ink)}
+.tbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:grid;place-items:center}
+@media (max-width:640px){nav{display:none}}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:1.08;margin:0 0 18px;font-weight:700;letter-spacing:-.01em;max-width:16ch}
+h2{font-size:clamp(1.55rem,3.4vw,2.1rem);line-height:1.2;margin:0 0 14px;font-weight:700}
+h3{font-size:1.2rem;margin:0 0 8px}
+p{margin:0 0 14px;max-width:62ch}
+.lead{font-size:1.2rem;color:var(--muted);max-width:56ch}
+.hero{padding:56px 0 28px}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:26px 0 10px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 24px;border-radius:16px;font-weight:700;font-size:1.05rem;text-decoration:none;border:2px solid var(--brand);font-family:inherit}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.ghost{color:var(--brand);background:transparent}
+.btn.coffee{background:var(--coffee);border-color:var(--coffee);color:#1b1b1b}
+.btn:hover{filter:brightness(1.07)}
+.note{font-size:.95rem;color:var(--muted)}
+.flow{margin:34px 0 8px;background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:22px 18px}
+.flow svg{display:block;width:100%;height:auto}
+.flow .big{fill:var(--soft);stroke:var(--brand);stroke-width:2}
+.flow .part{fill:var(--chunk)}
+.flow text{font-family:"Quicksand",system-ui,sans-serif;font-weight:700}
+.flow .t{fill:var(--ink);font-size:13px}
+.flow .tw{fill:#fff;font-size:15px}
+.flow .arrow{stroke:var(--muted);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.caption{font-size:.95rem;color:var(--muted);margin:12px 4px 0}
+section{padding:46px 0;border-top:1px solid var(--line)}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:20px}
+@media (max-width:760px){.three{grid-template-columns:1fr}}
+.three div{border-left:4px solid var(--brand);padding-left:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+ol.steps{margin:0;padding:0;list-style:none;counter-reset:s}
+ol.steps li{counter-increment:s;position:relative;padding:0 0 16px 46px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:700;display:grid;place-items:center;font-size:.95rem}
+ul.plain{padding-left:20px;margin:0 0 14px}
+ul.plain li{margin-bottom:6px}
+details{border-bottom:1px solid var(--line);padding:14px 0}
+summary{cursor:pointer;font-weight:700;font-size:1.08rem}
+details p{margin:10px 0 0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px}
+.dev{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start}
+@media (max-width:760px){.dev{grid-template-columns:1fr}}
+.who{font-size:1.35rem;font-weight:700;margin:0 0 4px}
+dl{margin:0}
+dt{font-weight:700;margin-top:12px}
+dd{margin:2px 0 0;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--muted);font-size:.95rem}
+code{background:var(--soft);padding:2px 7px;border-radius:7px;font-size:.92em}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="ChunkBridge home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#16A085"/><path d="M14 40h12v-8H14zM26 36h12M38 40h12v-8H38z" stroke="#fff" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      ChunkBridge
+    </a>
+    <nav aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#manual">User manual</a>
+      <a href="#faq">Questions</a>
+      <a href="#developer">Developer</a>
+    </nav>
+    <button class="tbtn" id="theme" type="button" aria-label="Switch between light and dark theme">☾</button>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap hero">
+  <h1>Send files that are too big to send.</h1>
+  <p class="lead">ChunkBridge cuts a big file into parts, you send the parts on WhatsApp or Telegram, and the other phone puts them back together exactly. No server, no data bundle for the app itself, and nothing is uploaded.</p>
+  <div class="btns">
+    <a class="btn primary" data-link="download" href="#">Download the app (APK)</a>
+    <a class="btn ghost" href="#manual">Read the user manual</a>
+  </div>
+  <p class="note">Free · Android 8.0 or newer · works offline</p>
+
+  <figure class="flow" style="margin-inline:0">
+    <svg viewBox="0 0 760 150" role="img" aria-label="A large file is split into five numbered parts, the parts are sent, and an identical file is rebuilt.">
+      <rect class="big" x="6" y="45" width="150" height="60" rx="14"/>
+      <text class="t" x="81" y="72" text-anchor="middle">movie.mkv</text>
+      <text class="t" x="81" y="92" text-anchor="middle">3.2 GB</text>
+      <path class="arrow" d="M170 75h40m-9-9 9 9-9 9"/>
+      <g>
+        <rect class="part" x="226" y="50" width="56" height="50" rx="10"/><text class="tw" x="254" y="81" text-anchor="middle">1</text>
+        <rect class="part" x="290" y="50" width="56" height="50" rx="10"/><text class="tw" x="318" y="81" text-anchor="middle">2</text>
+        <rect class="part" x="354" y="50" width="56" height="50" rx="10"/><text class="tw" x="382" y="81" text-anchor="middle">3</text>
+        <rect class="part" x="418" y="50" width="56" height="50" rx="10"/><text class="tw" x="446" y="81" text-anchor="middle">4</text>
+        <rect class="part" x="482" y="50" width="56" height="50" rx="10"/><text class="tw" x="510" y="81" text-anchor="middle">5</text>
+      </g>
+      <text class="t" x="382" y="28" text-anchor="middle">Send the parts in any order</text>
+      <text class="t" x="382" y="132" text-anchor="middle">WhatsApp, Telegram, anything</text>
+      <path class="arrow" d="M552 75h40m-9-9 9 9-9 9"/>
+      <rect class="big" x="604" y="45" width="150" height="60" rx="14"/>
+      <text class="t" x="679" y="72" text-anchor="middle">movie.mkv</text>
+      <text class="t" x="679" y="92" text-anchor="middle">identical</text>
+    </svg>
+  </figure>
+  <p class="caption">Every part and the finished file are checked with SHA-256, so a damaged copy is caught instead of saved.</p>
+</div>
+
+<section id="how"><div class="wrap">
+  <h2>How it works</h2>
+  <div class="three">
+    <div><h3>Split</h3><p>Pick any file and a part size. ChunkBridge creates numbered parts plus a small manifest that describes them.</p></div>
+    <div><h3>Send</h3><p>Share the manifest first, then the parts, through any app. You can pause and continue later.</p></div>
+    <div><h3>Rebuild</h3><p>The other phone adds the manifest and parts, sees what is missing, and rebuilds the original file.</p></div>
+  </div>
+</div></section>
+
+<section id="install"><div class="wrap">
+  <h2>Install the app</h2>
+  <p>ChunkBridge is installed from an APK file, so both phones need it.</p>
+  <ol class="steps">
+    <li>Tap <strong>Download the app (APK)</strong> above and download the latest file.</li>
+    <li>Open the downloaded file. If Android asks, allow your browser or Files app to install apps.</li>
+    <li>Tap <strong>Install</strong>. Because the app is not on Google Play, Android may show a warning. Continue only for a file you downloaded from this page.</li>
+    <li>Open ChunkBridge. It needs no accounts and no special permissions.</li>
+  </ol>
+</div></section>
+
+<section id="manual"><div class="wrap">
+  <h2>User manual</h2>
+  <div class="two">
+    <div>
+      <h3>Sending a file</h3>
+      <ol class="steps">
+        <li>Open <strong>Split a file</strong> and tap <strong>Choose file</strong>.</li>
+        <li>Pick a part size. Use a preset or type your own in MB. Keep it below what your messaging app allows.</li>
+        <li>Optional: switch on <strong>Protect with a password</strong>. Tell the receiver the password separately, never in the same chat as the parts.</li>
+        <li>Tap <strong>Start splitting</strong> and keep the app open until it says <em>Split complete</em>.</li>
+        <li>Tap <strong>Share chunks</strong>. Send the <strong>manifest</strong> first, then use <strong>Share next chunk</strong> until every part is sent.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Receiving a file</h3>
+      <ol class="steps">
+        <li>Save the manifest and the parts from the chat to your phone.</li>
+        <li>Open <strong>Receive a file</strong> and tap <strong>Choose manifest</strong>.</li>
+        <li>Tap <strong>Add chunks</strong> and select the parts. Any order, any number at a time.</li>
+        <li>Check the map. Missing parts are listed, so you know exactly what to ask for again.</li>
+        <li>Enter the password if the transfer is encrypted, then tap <strong>Rebuild the file</strong>.</li>
+        <li>Use <strong>Share / save the file</strong> to move the result to your gallery, Files or another app.</li>
+      </ol>
+    </div>
+  </div>
+  <h3 style="margin-top:18px">Good to know</h3>
+  <ul class="plain">
+    <li>Splitting and rebuilding need free space of roughly twice the file size while they work.</li>
+    <li>For very large files keep the app open and the phone charged until the job finishes.</li>
+    <li>History lists past transfers. Open one to keep sharing the parts you have not sent yet.</li>
+    <li>Settings lets you change the size presets and switch between light and dark themes.</li>
+  </ul>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <h2>Questions</h2>
+  <details><summary>Is my file uploaded anywhere?</summary><p>No. ChunkBridge has no server and no accounts. Files stay on your phone until you share them yourself.</p></details>
+  <details><summary>A part arrived damaged or is missing. What now?</summary><p>The Receive screen names the corrupted or missing parts. Ask the sender to send only those parts again, add them, and rebuild.</p></details>
+  <details><summary>The parts got renamed by WhatsApp or Telegram. Is that a problem?</summary><p>No. Parts are recognised by their content, not their names, so renamed copies still work.</p></details>
+  <details><summary>I forgot the password.</summary><p>The file cannot be recovered. Encryption is real: without the password nobody, including the developer, can open it.</p></details>
+  <details><summary>Does the receiver need the app?</summary><p>Yes. The receiver installs ChunkBridge to rebuild the file. The sender only shares ordinary files.</p></details>
+  <details><summary>Does it work on iPhone?</summary><p>Not yet. ChunkBridge is for Android.</p></details>
+  <details><summary>The rebuild says it is out of space.</summary><p>Free up space and try again. Your imported parts are kept, and nothing half-finished is left behind.</p></details>
+</div></section>
+
+<section id="developer"><div class="wrap">
+  <h2>Developer and credits</h2>
+  <div class="dev">
+    <div>
+      <p class="who">Praise Assumptah</p>
+      <p>Computer Science student at Mbarara University of Science and Technology, interested in backend development and cyber security. ChunkBridge started as a practical answer to a common problem: sending large files when data is expensive and apps limit file size.</p>
+      <div class="btns">
+        <a class="btn ghost" data-link="repo" href="#">Source and releases on GitHub</a>
+      </div>
+    </div>
+    <dl class="panel">
+      <dt>Developer</dt><dd>Praise Assumptah: idea, direction, testing and publishing.</dd>
+      <dt>Claude (Anthropic)</dt><dd>AI pair-programmer: architecture, code and tests, written together with the developer.</dd>
+      <dt>Quicksand</dt><dd>The typeface, under the SIL Open Font License.</dd>
+      <dt>Open-source projects</dt><dd>Flutter, Riverpod, file_picker, share_plus, cryptography and url_launcher.</dd>
+    </dl>
+  </div>
+  <div class="panel" style="margin-top:30px">
+    <h3>Support the project</h3>
+    <p>ChunkBridge is free. If it saved you time or data, you can buy the developer a coffee.</p>
+    <a class="btn coffee" data-link="coffee" href="#">☕ Buy me a coffee</a>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  © <span id="year">2026</span> Praise Assumptah. Made with Claude. ChunkBridge is provided as is, without warranty. Keep a copy of important files until you have checked the rebuilt one.
+</div></footer>
+
+<script>
+/* EDIT THESE THREE LINKS before publishing. */
+var LINKS = {
+  download: "https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO/releases/latest",
+  repo:     "https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO",
+  coffee:   "https://buymeacoffee.com/YOUR_NAME"
+};
+document.querySelectorAll("[data-link]").forEach(function (a) {
+  var url = LINKS[a.getAttribute("data-link")];
+  if (url && url.indexOf("YOUR_") === -1) { a.href = url; }
+  else { a.addEventListener("click", function (e) { e.preventDefault(); alert("This link is not set up yet. Edit the LINKS block in index.html."); }); }
+});
+document.getElementById("year").textContent = new Date().getFullYear();
+
+var root = document.documentElement, btn = document.getElementById("theme");
+function isDark() {
+  var t = root.getAttribute("data-theme");
+  return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function paint() { btn.textContent = isDark() ? "☀" : "☾"; }
+try { var saved = localStorage.getItem("cb-theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+btn.addEventListener("click", function () {
+  var next = isDark() ? "light" : "dark";
+  root.setAttribute("data-theme", next);
+  try { localStorage.setItem("cb-theme", next); } catch (e) {}
+  paint();
+});
+paint();
+</script>
+</body>
+</html>
